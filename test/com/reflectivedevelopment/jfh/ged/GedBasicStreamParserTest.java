@@ -27,15 +27,28 @@ import static org.junit.Assert.*;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
 
 import org.junit.Test;
 
 public class GedBasicStreamParserTest {
 
+	private String basicHead = 
+		"0 HEAD\n" +
+		"1 SOUR Reunion\n" +
+		"2 VERS V8.0\n" +
+		"2 CORP Leister Productions\n" +
+		"1 DEST Reunion\n" +
+		"1 DATE 11 FEB 2006\n" +
+		"1 FILE test\n" +
+		"1 GEDC\n" +
+		"2 VERS 5.5\n" +
+		"1 CHAR MACINTOSH\n";
+
 	@Test
-	public void testCreation() {
+	public void testConstruction() throws IOException {
 		
-		ByteArrayInputStream byteInput = new ByteArrayInputStream("".getBytes());
+		ByteArrayInputStream byteInput = new ByteArrayInputStream(basicHead.getBytes());
 		
 		GedBasicStreamParser parser = new GedBasicStreamParser(byteInput);
 		
@@ -45,6 +58,23 @@ public class GedBasicStreamParserTest {
 			fail(e.toString());
 		}
 	}
+
+	@Test
+	public void testHead() throws IOException {
+		
+		ByteArrayInputStream byteInput = new ByteArrayInputStream(basicHead.getBytes());
+		
+		GedBasicStreamParser parser = new GedBasicStreamParser(byteInput);
+		
+		try {
+			parser.getNextBlock();
+			
+			parser.closeStream();
+		} catch (IOException e) {
+			fail(e.toString());
+		}
+	}
+
 	
 	@Test
 	public void testSimpleGed() {

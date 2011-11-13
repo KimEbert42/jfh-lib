@@ -25,20 +25,59 @@ package com.reflectivedevelopment.jfh.ged;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.LineNumberReader;
+
+import com.reflectivedevelopment.jfh.ged.objects.GedObject;
 
 public class GedBasicStreamParser {
 
-	InputStream mDataStream = null;
+	protected InputStream mDataStream = null;
+	protected LineNumberReader mLineReader = null;
+	private String[] mLine = null;
 	
-	public GedBasicStreamParser(InputStream dataStream)
+	public GedBasicStreamParser(InputStream dataStream) throws IOException
 	{
 		super();
 		mDataStream = dataStream;
+		InputStreamReader tmpReader = new InputStreamReader(mDataStream, "UTF-8");
+		mLineReader = new LineNumberReader(tmpReader);
+		nextLine();
+	}
+
+	private String[] getLine()
+	{
+		return mLine;
 	}
 	
-	public String getNextBlock()
+	private void nextLine() throws IOException
 	{
+		String tmpLine = mLineReader.readLine();
 		
+		if (tmpLine == null)
+			mLine = null;
+		else
+			mLine = tmpLine.split(" ", 3);
+	}
+
+	private void parseNextBlock() throws IOException
+	{
+		int depth = 0;
+		do {
+			String[] tmpLine = getLine();
+			if (tmpLine == null)
+				return;
+			depth = new Integer(getLine()[0]);
+			
+			System.out.println(depth + ": " + tmpLine[1]);
+			
+			nextLine();
+		} while (depth > -1);
+	}
+	
+	public GedObject getNextBlock() throws IOException
+	{
+		parseNextBlock();
 		return null;
 	}
 	
