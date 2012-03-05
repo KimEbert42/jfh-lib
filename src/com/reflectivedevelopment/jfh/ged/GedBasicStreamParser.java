@@ -28,21 +28,44 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.LineNumberReader;
 
+import com.reflectivedevelopment.io.UnbufferedLineNumberReader;
 import com.reflectivedevelopment.jfh.ged.objects.GedObject;
+import com.reflectivedevelopment.jfh.ged.objects.head.GedObjectChar;
 
 public class GedBasicStreamParser {
 
 	protected InputStream mDataStream = null;
+	protected InputStreamReader mInputStreamReader = null;
 	protected LineNumberReader mLineReader = null;
 	private String[] mLine = null;
 	
 	public GedBasicStreamParser(InputStream dataStream) throws IOException
 	{
 		super();
-		mDataStream = dataStream;
-		InputStreamReader tmpReader = new InputStreamReader(mDataStream, "UTF-8");
-		mLineReader = new LineNumberReader(tmpReader);
+		mDataStream = dataStream;	
+/*
+ * TODO: Add ANSEL support.
+ * 
+ * We currently only support byte types 0-127 until a charset is defined!
+ * 
+ * We don't have ANSEL support as part of Java, so we need to add it.
+ * 
+ * We also cannot buffer until we reopen the data stream.
+ * 
+ * The 8-Bit ANSEL (American National Standard for Extended Latin Alphabet Coded Character Set for
+ * Bibliographic Use, Z39.47-1985 copyright) is the preferred character set for GEDCOM. It is used for all
+ * transmissions of information unless another character set is specified.
+ */
+		mLineReader = new UnbufferedLineNumberReader(mDataStream);
 		nextLine();
+	}
+	
+	private void reopenDataStream(GedObjectChar charObject) throws IOException
+	{
+		if (mInputStreamReader != null)
+			throw new IOException("Cannot re-open stream more than once!");
+		mInputStreamReader = new InputStreamReader(mDataStream, charObject.getEncoding());
+		mLineReader = new LineNumberReader(mInputStreamReader);
 	}
 
 	private String[] getLine()
@@ -60,25 +83,55 @@ public class GedBasicStreamParser {
 			mLine = tmpLine.split(" ", 3);
 	}
 
-	private void parseNextBlock() throws IOException
+	private GedObject parseNextBlock() throws IOException
 	{
+		GedObject last = null;
+		GedObject first = null;
+		GedObject current = null;
+
 		int depth = 0;
 		do {
+			last = current;	
+			if (first == null)
+				first = last;
+			
 			String[] tmpLine = getLine();
 			if (tmpLine == null)
-				return;
+				return first;
 			depth = new Integer(getLine()[0]);
 			
-			System.out.println(depth + ": " + tmpLine[1]);
+			if (last != null)
+			{
+				while (depth <= last.getDepth())
+				{
+					last = last.getParent();
+					if (last == null)
+						break;
+				}
+				if (last == null)
+					break;
+			}
+			
+			if (tmpLine.length == 3)
+				current = GedObject.createGedObject(first, last, depth, tmpLine[1], tmpLine[2]);
+			else
+				current = GedObject.createGedObject(first, last, depth, tmpLine[1], null);
+			
+			if (current instanceof GedObjectChar)
+				reopenDataStream((GedObjectChar)current);
+				
+			if (last != null)
+				last.addChild(current);
 			
 			nextLine();
-		} while (depth > -1);
+		} while (true);
+		
+		return first;
 	}
 	
 	public GedObject getNextBlock() throws IOException
 	{
-		parseNextBlock();
-		return null;
+		return parseNextBlock();
 	}
 	
 	public void closeStream() throws IOException
