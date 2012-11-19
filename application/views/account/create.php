@@ -1,0 +1,6 @@
+Basic view
+
+<?php
+
+?>
+
